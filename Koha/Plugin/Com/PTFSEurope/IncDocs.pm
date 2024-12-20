@@ -793,6 +793,12 @@ sub create_request {
         ? ( $patron->notice_email_address ? $patron->notice_email_address : $config->{payload_requesteremail} )
         : '';
 
+# incdocs_api_field_map
+
+# use Data::Dumper; $Data::Dumper::Maxdepth = 2;
+# warn Dumper('##### 1 #######################################################line: ' . __LINE__);
+# warn Dumper($submission);
+# warn Dumper('##### end1 #######################################################');
     # # Make the request with IncDocs Lending Tool via the koha-plugin-IncDocs API
     my $result = $incdocs_api->Create_Fulfillment_Request(
         {
@@ -1727,9 +1733,21 @@ sub unmediated_confirm {
 
     my $availability = $self->availability($params);
 
-    $params->{other}->{articleId} = delete $availability->{backend_availability}->{response}->{data}->{id};
-    $params->{other}->{lenderLibraryId} =
-        delete $availability->{backend_availability}->{response}->{data}->{illLibraryId};
+use Data::Dumper; $Data::Dumper::Maxdepth = 2;
+warn Dumper('##### 1 #######################################################line: ' . __LINE__);
+warn Dumper( $params->{other} );
+warn Dumper('##### end1 #######################################################');
+
+    $params->{other} = incdocs_api_response_to_request( $params->{other} );
+    # $params->{other}->{articleId} = delete $availability->{backend_availability}->{response}->{data}->{id};
+    # $params->{other}->{lenderLibraryId} =
+    #     delete $availability->{backend_availability}->{response}->{data}->{illLibraryId};
+
+use Data::Dumper;
+$Data::Dumper::Maxdepth = 2;
+warn Dumper( '##### 1 #######################################################line: ' . __LINE__ );
+warn Dumper( $params->{other} );
+warn Dumper('##### end1 #######################################################');
 
     if ( $availability->{backend_availability}->{response} ) {
         $params->{other} = {
@@ -1740,6 +1758,28 @@ sub unmediated_confirm {
 
 
     return $self->create_request($params);
+}
+
+=head3 incdocs_api_response_to_request
+
+Incdocs uses different names to refer to the same thing.
+
+=cut
+
+sub incdocs_api_field_map {
+    my ( $params ) = @_;
+    
+    my $map = {
+        id           => 'articleId',
+        illLibraryId => 'lenderLibraryId',
+    };
+    foreach my $key ( keys %{$params} ) {
+        if ( exists $map->{$key} ) {
+            $params->{$map->{$key}} = delete $params->{$key};
+        }
+    }
+
+    return $params;
 }
 
 1;
